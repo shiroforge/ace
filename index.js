@@ -1,21 +1,47 @@
 function fetchUserInfo(userId) {
-    // リクエストを作成する
-    const request = new XMLHttpRequest();
-    request.open("GET", `https://api.github.com/users/${encodeURIComponent(userId)}`);
-    request.addEventListener("load", () => {
-        // リクエストが成功したかを判定する
-        // Fetch APIのresponse.okと同等の意味
-        if (request.status >= 200 && request.status < 300) {
-            // レスポンス文字列をJSONオブジェクトにパースする
-            const userInfo = JSON.parse(request.responseText);
-            console.log(userInfo);
+    fetch(`https://api.github.com/users/${encodeURIComponent(userId)}`)
+        .then(response => {
+            if (!response.ok) {
+                console.error("エラーレスポンス", response);
+            } else {
+                return response.json().then(userInfo => {
+                    // HTMLの組み立て
+                    const view = escapeHTML`
+                    <h4>${userInfo.name} (@${userInfo.login})</h4>
+                    <img src="${userInfo.avatar_url}" alt="${userInfo.login}" height="100">
+                    <dl>
+                        <dt>Location</dt>
+                        <dd>${userInfo.location}</dd>
+                        <dt>Repositories</dt>
+                        <dd>${userInfo.public_repos}</dd>
+                    </dl>
+                    `;
+                    // HTMLの挿入
+                    const result = document.getElementById("result");
+                    result.innerHTML = view;
+                });
+            }
+        }).catch(error => {
+            console.error(error);
+        });
+}
+
+function escapeSpecialChars(str) {
+    return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+function escapeHTML(strings, ...values) {
+    return strings.reduce((result, str, i) => {
+        const value = values[i - 1];
+        if (typeof value === "string") {
+            return result + escapeSpecialChars(value) + str;
         } else {
-            console.error("エラーレスポンス", request.statusText);
+            return result + String(value) + str;
         }
     });
-    request.addEventListener("error", () => {
-        console.error("ネットワークエラー");
-    });
-    // リクエストを送信する
-    request.send();
 }
